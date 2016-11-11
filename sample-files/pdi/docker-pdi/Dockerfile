@@ -3,41 +3,34 @@
 # https://github.com/wmarinho/docker-pentaho/blob/master/data-integration/Dockerfile
 # Docker supports OpenJDK only
 # For versions and tags see https://github.com/docker-library/docs/blob/master/java/tag-details.md
-FROM java:8-jre
+FROM anapsix/alpine-java:8_jdk_unlimited
 
-MAINTAINER Diethard Steiner
+MAINTAINER Jesus Carpintero
 
 # Set required environment vars
-ENV PDI_RELEASE=6.0 \
-    PDI_VERSION=6.0.1.0-386 \
+ENV PDI_RELEASE=6.1 \
+    PDI_VERSION=6.1.0.1-196 \
     CARTE_PORT=8181 \
-    PENTAHO_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64 \
     PENTAHO_HOME=/home/pentaho
 
 # Create user
 RUN mkdir ${PENTAHO_HOME} && \
-    groupadd -r pentaho && \
-    useradd -s /bin/bash -d ${PENTAHO_HOME} -r -g pentaho pentaho && \
+    adduser -D -u 1000 -s /bin/bash -h ${PENTAHO_HOME} pentaho && \
+    addgroup pentaho pentaho && \
     chown pentaho:pentaho ${PENTAHO_HOME}
 
 # Add files
 RUN mkdir $PENTAHO_HOME/docker-entrypoint.d $PENTAHO_HOME/templates $PENTAHO_HOME/scripts
-
 COPY carte-*.config.xml $PENTAHO_HOME/templates/
-
 COPY docker-entrypoint.sh $PENTAHO_HOME/scripts/
 
-RUN chown -R pentaho:pentaho $PENTAHO_HOME 
-# chmod +x $PENTAHO_HOME/scripts/docker-entrypoint.sh && \
-
+RUN chown -R pentaho:pentaho $PENTAHO_HOME
 
 # Switch to the pentaho user
 USER pentaho
 
-
 # Download PDI
 RUN /usr/bin/wget \
-    --progress=dot:giga \
     http://downloads.sourceforge.net/project/pentaho/Data%20Integration/${PDI_RELEASE}/pdi-ce-${PDI_VERSION}.zip \
     -O /tmp/pdi-ce-${PDI_VERSION}.zip && \
     /usr/bin/unzip -q /tmp/pdi-ce-${PDI_VERSION}.zip -d  $PENTAHO_HOME && \
@@ -48,12 +41,10 @@ RUN /usr/bin/wget \
     # unzip file into the pentaho home directory, target indicated by the -d flag \
     # by default the extracted file will end up in a folder called data-integration \
 
-
 # We can only add KETTLE_HOME to the PATH variable now
 # as the path gets eveluated - so it must already exist
 ENV KETTLE_HOME=$PENTAHO_HOME/data-integration \
     PATH=$KETTLE_HOME:$PATH
-
 
 # Expose Carte Server
 EXPOSE ${CARTE_PORT}
